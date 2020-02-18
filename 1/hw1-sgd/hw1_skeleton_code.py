@@ -25,9 +25,12 @@ def feature_normalization(train, test):
 
     """
     # TODO
-    norm_mat = np.diag(1/np.apply_along_axis(np.sum, axis=1, arr=train))
-    train_normalized = np.dot(norm_mat, train)
-    test_normalized = np.dot(norm_mat, test)
+    # each feature f ranges from a to b, normalize it to (f-a)/(b-a)
+    max_mat = np.apply_along_axis(np.max, axis=1, arr=train)
+    min_mat = np.apply_along_axis(np.min, axis=1, arr=train)
+    norm_mat = np.diag(1 / (max_mat - min_mat))
+    train_normalized = np.dot(norm_mat, train - min_mat)
+    test_normalized = np.dot(norm_mat, test - min_mat )
     return train_normalized, test_normalized
 
 
