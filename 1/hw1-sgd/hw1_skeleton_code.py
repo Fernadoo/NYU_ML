@@ -25,6 +25,10 @@ def feature_normalization(train, test):
 
     """
     # TODO
+    norm_mat = np.diag(1/np.apply_along_axis(np.sum, axis=1, arr=train))
+    train_normalized = np.dot(norm_mat, train)
+    test_normalized = np.dot(norm_mat, test)
+    return train_normalized, test_normalized
 
 
 ########################################
