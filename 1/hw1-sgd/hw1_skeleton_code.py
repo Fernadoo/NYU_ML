@@ -51,7 +51,8 @@ def compute_square_loss(X, y, theta):
     """
     loss = 0 #initialize the square_loss
     #TODO
-    
+    loss = np.dot(X, theta) - y # (num_features)
+    return 1 / (2 * X.shape[0]) * (np.linalg.norm(loss, order=2) ** 2)
 
 
 ########################################
@@ -69,6 +70,8 @@ def compute_square_loss_gradient(X, y, theta):
         grad - gradient vector, 1D numpy array of size (num_features)
     """
     #TODO
+    loss = np.dot(X, theta) - y # (num_features)
+    return 1 / X.shape[0] * np.dot(loss, X)
     
        
         
