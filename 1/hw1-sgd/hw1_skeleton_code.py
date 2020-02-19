@@ -25,9 +25,12 @@ def feature_normalization(train, test):
 
     """
     # TODO
-    norm_mat = np.diag(1/np.apply_along_axis(np.sum, axis=1, arr=train))
-    train_normalized = np.dot(norm_mat, train)
-    test_normalized = np.dot(norm_mat, test)
+    # each feature f ranges from a to b, normalize it to (f-a)/(b-a)
+    max_mat = np.apply_along_axis(np.max, axis=1, arr=train)
+    min_mat = np.apply_along_axis(np.min, axis=1, arr=train)
+    norm_mat = np.diag(1 / (max_mat - min_mat))
+    train_normalized = np.dot(norm_mat, train - min_mat)
+    test_normalized = np.dot(norm_mat, test - min_mat )
     return train_normalized, test_normalized
 
 
@@ -48,7 +51,8 @@ def compute_square_loss(X, y, theta):
     """
     loss = 0 #initialize the square_loss
     #TODO
-    
+    loss = np.dot(X, theta) - y # (num_features)
+    return 1 / (2 * X.shape[0]) * (np.linalg.norm(loss, order=2) ** 2)
 
 
 ########################################
@@ -66,6 +70,8 @@ def compute_square_loss_gradient(X, y, theta):
         grad - gradient vector, 1D numpy array of size (num_features)
     """
     #TODO
+    loss = np.dot(X, theta) - y # (num_features)
+    return 1 / X.shape[0] * np.dot(loss, X)
     
        
         
@@ -110,6 +116,16 @@ def grad_checker(X, y, theta, epsilon=0.01, tolerance=1e-4):
     num_features = theta.shape[0]
     approx_grad = np.zeros(num_features) #Initialize the gradient we approximate
     #TODO
+    for i in range(num_features):
+        delta = np.zeros(num_features)
+        delta[i] = 1
+        j_plus = compute_square_loss(X, y, theta+np.dot(delta,epsilon))
+        j_minus = compute_square_loss(X, y, theta-np.dot(delta,epsilon))
+        approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
+    if np,norm(approx_grad - true_gradient, order=2) <= tolerance:
+        return True
+    else:
+        retuen False
     
 #################################################
 ###Q2.3b: Generic Gradient Checker
