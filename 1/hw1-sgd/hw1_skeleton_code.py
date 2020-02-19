@@ -119,10 +119,10 @@ def grad_checker(X, y, theta, epsilon=0.01, tolerance=1e-4):
     for i in range(num_features):
         delta = np.zeros(num_features)
         delta[i] = 1
-        j_plus = compute_square_loss(X, y, theta+np.dot(delta,epsilon))
-        j_minus = compute_square_loss(X, y, theta-np.dot(delta,epsilon))
+        j_plus = compute_square_loss(X, y, theta+delta*epsilon)
+        j_minus = compute_square_loss(X, y, theta-delta*epsilon)
         approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
-    if np,norm(approx_grad - true_gradient, order=2) <= tolerance:
+    if np.linalg.norm(approx_grad - true_gradient, order=2) <= tolerance:
         return True
     else:
         retuen False
@@ -162,6 +162,17 @@ def batch_grad_descent(X, y, alpha=0.1, num_iter=1000, check_gradient=False):
     loss_hist = np.zeros(num_iter+1) #initialize loss_hist
     theta = np.ones(num_features) #initialize theta
     #TODO
+    for i in range(num_iter+1):
+        theta_hist[i] = theta
+        loss_hist[i] = compute_square_loss(X, y, theta)
+        gradient = compute_square_loss_gradient(X, y, theta)
+        if check_gradient:
+            if grad_checker(X, y, theta):
+                print("The CHECKER says no!")
+                return None
+        else:
+            theta = theta - alpha * gradient
+    return theta_hist, loss_hist
 
 ####################################
 ###Q2.4b: Implement backtracking line search in batch_gradient_descent
@@ -186,6 +197,9 @@ def compute_regularized_square_loss_gradient(X, y, theta, lambda_reg):
         grad - gradient vector, 1D numpy array of size (num_features)
     """
     #TODO
+    gradient = 1 / X.shape[0] * np.dot((np.dot(X, theta) - y), X)
+                 + 2 * lambda_reg * theta
+    return gradient
 
 ###################################################
 ###Q2.5b: Batch Gradient Descent with regularization term
@@ -207,7 +221,14 @@ def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     theta_hist = np.zeros((num_iter+1, num_features))  #Initialize theta_hist
     loss_hist = np.zeros(num_iter+1) #Initialize loss_hist
     #TODO
-    
+    for i in range(num_iter+1):
+        theta_hist[i] = theta
+        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
+                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        theta = theta - alpha * compute_regularized_square_loss_gradient(X, y, theta, lambda_reg)
+    return theta_hist, loss_hist
+
+
 #############################################
 ##Q2.5c: Visualization of Regularized Batch Gradient Descent
 ##X-axis: log(lambda_reg)
@@ -241,6 +262,23 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     theta_hist = np.zeros((num_iter, num_instances, num_features))  #Initialize theta_hist
     loss_hist = np.zeros((num_iter, num_instances)) #Initialize loss_hist
     #TODO
+    for i in range(num_iter+1):
+        theta_hist[i] = theta
+        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
+                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        if type(alpha) == float:
+            alpha = alpha
+        elif alpha == "1/sqrt(t)":
+            alpha = 1/sqrt(t)
+        elif alpha == "1/t":
+            alpha = 1/t
+        rand_i = np.random.randint(0, num_instances)
+        x_i = X[rand_i]
+        y_i = y[rand_i]
+        stoc_gradient = 1 / num_instances * np.dot(np.dot(x_i, theta) - y_i, x_i)
+                + 2 * lambda_reg * theta
+        theta = theta - alpha * stoc_gradient
+    return theta_hist, loss_hist
 
 ################################################
 ###Q2.6b Visualization that compares the convergence speed of batch
