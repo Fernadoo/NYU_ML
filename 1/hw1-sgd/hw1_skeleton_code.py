@@ -197,6 +197,9 @@ def compute_regularized_square_loss_gradient(X, y, theta, lambda_reg):
         grad - gradient vector, 1D numpy array of size (num_features)
     """
     #TODO
+    gradient = 1 / X.shape[0] * np.dot((np.dot(X, theta) - y), X)
+                 + 2 * lambda_reg * theta
+    return gradient
 
 ###################################################
 ###Q2.5b: Batch Gradient Descent with regularization term
@@ -218,7 +221,14 @@ def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     theta_hist = np.zeros((num_iter+1, num_features))  #Initialize theta_hist
     loss_hist = np.zeros(num_iter+1) #Initialize loss_hist
     #TODO
-    
+    for i in range(num_iter+1):
+        theta_hist[i] = theta
+        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
+                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        theta = theta - alpha * compute_regularized_square_loss_gradient(X, y, theta, lambda_reg)
+    return theta_hist, loss_hist
+
+
 #############################################
 ##Q2.5c: Visualization of Regularized Batch Gradient Descent
 ##X-axis: log(lambda_reg)
