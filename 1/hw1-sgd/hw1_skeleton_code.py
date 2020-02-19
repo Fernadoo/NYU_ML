@@ -116,6 +116,16 @@ def grad_checker(X, y, theta, epsilon=0.01, tolerance=1e-4):
     num_features = theta.shape[0]
     approx_grad = np.zeros(num_features) #Initialize the gradient we approximate
     #TODO
+    for i in range(num_features):
+        delta = np.zeros(num_features)
+        delta[i] = 1
+        j_plus = compute_square_loss(X, y, theta+np.dot(delta,epsilon))
+        j_minus = compute_square_loss(X, y, theta-np.dot(delta,epsilon))
+        approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
+    if np,norm(approx_grad - true_gradient, order=2) <= tolerance:
+        return True
+    else:
+        retuen False
     
 #################################################
 ###Q2.3b: Generic Gradient Checker
