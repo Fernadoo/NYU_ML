@@ -122,7 +122,7 @@ def grad_checker(X, y, theta, epsilon=0.01, tolerance=1e-4):
         j_plus = compute_square_loss(X, y, theta+delta*epsilon)
         j_minus = compute_square_loss(X, y, theta-delta*epsilon)
         approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
-    if np,norm(approx_grad - true_gradient, order=2) <= tolerance:
+    if np.linalg.norm(approx_grad - true_gradient, order=2) <= tolerance:
         return True
     else:
         retuen False
@@ -162,6 +162,17 @@ def batch_grad_descent(X, y, alpha=0.1, num_iter=1000, check_gradient=False):
     loss_hist = np.zeros(num_iter+1) #initialize loss_hist
     theta = np.ones(num_features) #initialize theta
     #TODO
+    for i in range(num_iter+1):
+        theta_hist[i] = theta
+        loss_hist[i] = compute_square_loss(X, y, theta)
+        gradient = compute_square_loss_gradient(X, y, theta)
+        if check_gradient:
+            if grad_checker(X, y, theta):
+                print("The CHECKER says no!")
+                return None
+        else:
+            theta = theta - alpha * gradient
+    return theta_hist, loss_hist
 
 ####################################
 ###Q2.4b: Implement backtracking line search in batch_gradient_descent
