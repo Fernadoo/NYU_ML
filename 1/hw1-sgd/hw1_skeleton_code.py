@@ -262,6 +262,23 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     theta_hist = np.zeros((num_iter, num_instances, num_features))  #Initialize theta_hist
     loss_hist = np.zeros((num_iter, num_instances)) #Initialize loss_hist
     #TODO
+    for i in range(num_iter+1):
+        theta_hist[i] = theta
+        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
+                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        if type(alpha) == float:
+            alpha = alpha
+        elif alpha == "1/sqrt(t)":
+            alpha = 1/sqrt(t)
+        elif alpha == "1/t":
+            alpha = 1/t
+        rand_i = np.random.randint(0, num_instances)
+        x_i = X[rand_i]
+        y_i = y[rand_i]
+        stoc_gradient = 1 / num_instances * np.dot(np.dot(x_i, theta) - y_i, x_i)
+                + 2 * lambda_reg * theta
+        theta = theta - alpha * stoc_gradient
+    return theta_hist, loss_hist
 
 ################################################
 ###Q2.6b Visualization that compares the convergence speed of batch
