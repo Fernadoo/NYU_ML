@@ -286,7 +286,7 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
 ##X-axis: Step number (for gradient descent) or Epoch (for SGD)
 ##Y-axis: log(objective_function_value)
 
-def main():
+def main(method):
     #Loading the dataset
     print('loading the dataset')
     
@@ -303,6 +303,19 @@ def main():
     X_test = np.hstack((X_test, np.ones((X_test.shape[0], 1)))) # Add bias term
 
     # TODO
+    if method == "batch_gradient_descent":
+        theta_hist, loss_hist = batch_gradient_descent(X_train, y_train)
+    elif method == "regularized_grad_descent":
+        theta_hist, loss_hist = regularized_grad_descent(X_train, y_train)
+    elif method == "stochastic_grad_descent":
+        theta_hist, loss_hist = stochastic_grad_descent(X_train, y_train)
+    
+    plt.plot(np.log(loss_hist), label=f"loss")
+    plt.plot(theta_hist, label=f"theta")
+    plt.legend()
+    plt.show()
+
+
 
 if __name__ == "__main__":
     main()
