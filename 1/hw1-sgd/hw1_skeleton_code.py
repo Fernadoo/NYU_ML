@@ -3,7 +3,9 @@ import logging
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
-from sklearn.cross_validation import train_test_split
+# from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
+from sys import argv
 
 ### Assignment Owner: Tian Wang
 
@@ -28,9 +30,10 @@ def feature_normalization(train, test):
     # each feature f ranges from a to b, normalize it to (f-a)/(b-a)
     max_mat = np.apply_along_axis(np.max, axis=1, arr=train)
     min_mat = np.apply_along_axis(np.min, axis=1, arr=train)
+    # print(max_mat, min_mat)
     norm_mat = np.diag(1 / (max_mat - min_mat))
-    train_normalized = np.dot(norm_mat, train - min_mat)
-    test_normalized = np.dot(norm_mat, test - min_mat )
+    train_normalized = np.dot(norm_mat, train - min_mat[:, np.newaxis])
+    test_normalized = np.dot(norm_mat, test - min_mat[:, np.newaxis])
     return train_normalized, test_normalized
 
 
@@ -52,7 +55,7 @@ def compute_square_loss(X, y, theta):
     loss = 0 #initialize the square_loss
     #TODO
     loss = np.dot(X, theta) - y # (num_features)
-    return 1 / (2 * X.shape[0]) * (np.linalg.norm(loss, order=2) ** 2)
+    return 1 / (2 * X.shape[0]) * (np.linalg.norm(loss, ord=2) ** 2)
 
 
 ########################################
@@ -122,10 +125,10 @@ def grad_checker(X, y, theta, epsilon=0.01, tolerance=1e-4):
         j_plus = compute_square_loss(X, y, theta+delta*epsilon)
         j_minus = compute_square_loss(X, y, theta-delta*epsilon)
         approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
-    if np.linalg.norm(approx_grad - true_gradient, order=2) <= tolerance:
+    if np.linalg.norm(approx_grad - true_gradient, ord=2) <= tolerance:
         return True
     else:
-        retuen False
+        return False
     
 #################################################
 ###Q2.3b: Generic Gradient Checker
@@ -197,7 +200,7 @@ def compute_regularized_square_loss_gradient(X, y, theta, lambda_reg):
         grad - gradient vector, 1D numpy array of size (num_features)
     """
     #TODO
-    gradient = 1 / X.shape[0] * np.dot((np.dot(X, theta) - y), X)
+    gradient = 1 / X.shape[0] * np.dot((np.dot(X, theta) - y), X) \
                  + 2 * lambda_reg * theta
     return gradient
 
@@ -223,8 +226,8 @@ def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     #TODO
     for i in range(num_iter+1):
         theta_hist[i] = theta
-        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
-                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, ord=2) ** 2) \
+                 + lambda_reg * (np.linalg.norm(theta, ord=2) ** 2)
         theta = theta - alpha * compute_regularized_square_loss_gradient(X, y, theta, lambda_reg)
     return theta_hist, loss_hist
 
@@ -264,8 +267,8 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     #TODO
     for i in range(num_iter+1):
         theta_hist[i] = theta
-        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
-                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, ord=2) ** 2) \
+                 + lambda_reg * (np.linalg.norm(theta, ord=2) ** 2)
         if type(alpha) == float:
             alpha = alpha
         elif alpha == "1/sqrt(t)":
@@ -275,7 +278,7 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
         rand_i = np.random.randint(0, num_instances)
         x_i = X[rand_i]
         y_i = y[rand_i]
-        stoc_gradient = 1 / num_instances * np.dot(np.dot(x_i, theta) - y_i, x_i)
+        stoc_gradient = 1 / num_instances * np.dot(np.dot(x_i, theta) - y_i, x_i) \
                 + 2 * lambda_reg * theta
         theta = theta - alpha * stoc_gradient
     return theta_hist, loss_hist
@@ -303,19 +306,20 @@ def main(method):
     X_test = np.hstack((X_test, np.ones((X_test.shape[0], 1)))) # Add bias term
 
     # TODO
-    if method == "batch_gradient_descent":
-        theta_hist, loss_hist = batch_gradient_descent(X_train, y_train)
+    if method == "batch_grad_descent":
+        theta_hist, loss_hist = batch_grad_descent(X_train, y_train)
     elif method == "regularized_grad_descent":
         theta_hist, loss_hist = regularized_grad_descent(X_train, y_train)
     elif method == "stochastic_grad_descent":
         theta_hist, loss_hist = stochastic_grad_descent(X_train, y_train)
-    
-    plt.plot(np.log(loss_hist), label=f"loss")
-    plt.plot(theta_hist, label=f"theta")
+    print(loss_hist)
+    plt.plot(loss_hist[50:], label=f"loss")
+    # plt.plot(theta_hist, label=f"theta")
     plt.legend()
     plt.show()
 
 
 
 if __name__ == "__main__":
-    main()
+    print(argv)
+    main(argv[1])
