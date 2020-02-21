@@ -3,7 +3,9 @@ import logging
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
-from sklearn.cross_validation import train_test_split
+# from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
+from sys import argv
 
 ### Assignment Owner: Tian Wang
 
@@ -28,9 +30,10 @@ def feature_normalization(train, test):
     # each feature f ranges from a to b, normalize it to (f-a)/(b-a)
     max_mat = np.apply_along_axis(np.max, axis=1, arr=train)
     min_mat = np.apply_along_axis(np.min, axis=1, arr=train)
+    # print(max_mat, min_mat)
     norm_mat = np.diag(1 / (max_mat - min_mat))
-    train_normalized = np.dot(norm_mat, train - min_mat)
-    test_normalized = np.dot(norm_mat, test - min_mat )
+    train_normalized = np.dot(norm_mat, train - min_mat[:, np.newaxis])
+    test_normalized = np.dot(norm_mat, test - min_mat[:, np.newaxis])
     return train_normalized, test_normalized
 
 
@@ -52,8 +55,10 @@ def compute_square_loss(X, y, theta):
     loss = 0 #initialize the square_loss
     #TODO
     loss = np.dot(X, theta) - y # (num_features)
-    return 1 / (2 * X.shape[0]) * (np.linalg.norm(loss, order=2) ** 2)
-
+    if type(loss) == np.float64:
+        return 1 / (2 * X.shape[0]) * (loss ** 2)
+    else:
+        return 1 / (2 * X.shape[0]) * (np.linalg.norm(loss, ord=2) ** 2)
 
 ########################################
 ###Q2.2b: compute the gradient of square loss function
@@ -122,25 +127,40 @@ def grad_checker(X, y, theta, epsilon=0.01, tolerance=1e-4):
         j_plus = compute_square_loss(X, y, theta+delta*epsilon)
         j_minus = compute_square_loss(X, y, theta-delta*epsilon)
         approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
-    if np.linalg.norm(approx_grad - true_gradient, order=2) <= tolerance:
+    if np.linalg.norm(approx_grad - true_gradient, ord=2) <= tolerance:
         return True
     else:
-        retuen False
+        return False
     
 #################################################
 ###Q2.3b: Generic Gradient Checker
-def generic_gradient_checker(X, y, theta, objective_func, gradient_func, epsilon=0.01, tolerance=1e-4):
+def generic_gradient_checker(X, y, theta, objective_func, gradient_func, lambda_reg=0, epsilon=0.01, tolerance=1e-4):
     """
     The functions takes objective_func and gradient_func as parameters. And check whether gradient_func(X, y, theta) returned
     the true gradient for objective_func(X, y, theta).
     Eg: In LSR, the objective_func = compute_square_loss, and gradient_func = compute_square_loss_gradient
     """
     #TODO
+    true_gradient = gradient_func(X, y, theta, lambda_reg) #the true gradient
+    # print(true_gradient)
+    num_features = theta.shape[0]
+    approx_grad = np.zeros(num_features) #Initialize the gradient we approximate
+    #TODO
+    for i in range(num_features):
+        delta = np.zeros(num_features)
+        delta[i] = 1
+        j_plus = objective_func(X, y, theta+delta*epsilon, lambda_reg)
+        j_minus = objective_func(X, y, theta-delta*epsilon, lambda_reg)
+        approx_grad[i] = (j_plus - j_minus) / (2 * epsilon)
+    if np.linalg.norm(approx_grad - true_gradient, ord=2) <= tolerance:
+        return True
+    else:
+        return False
 
 
 ####################################
 ####Q2.4a: Batch Gradient Descent
-def batch_grad_descent(X, y, alpha=0.1, num_iter=1000, check_gradient=False):
+def batch_grad_descent(X, y, alpha=0.1, num_iter=1000, check_gradient=True):
     """
     In this question you will implement batch gradient descent to
     minimize the square loss objective
@@ -167,11 +187,12 @@ def batch_grad_descent(X, y, alpha=0.1, num_iter=1000, check_gradient=False):
         loss_hist[i] = compute_square_loss(X, y, theta)
         gradient = compute_square_loss_gradient(X, y, theta)
         if check_gradient:
-            if grad_checker(X, y, theta):
+            if not grad_checker(X, y, theta):
                 print("The CHECKER says no!")
                 return None
-        else:
-            theta = theta - alpha * gradient
+            if i == num_iter:
+                print("The CHECKER says yes!")
+        theta = theta - alpha * gradient
     return theta_hist, loss_hist
 
 ####################################
@@ -183,6 +204,13 @@ def batch_grad_descent(X, y, alpha=0.1, num_iter=1000, check_gradient=False):
 
 ###################################################
 ###Q2.5a: Compute the gradient of Regularized Batch Gradient Descent
+
+# helper function
+def compute_regularized_square_loss(X, y, theta, lambda_reg):
+    gradient = compute_square_loss(X, y, theta) \
+                + lambda_reg * (np.linalg.norm(theta, ord=2) ** 2)
+    return gradient
+
 def compute_regularized_square_loss_gradient(X, y, theta, lambda_reg):
     """
     Compute the gradient of L2-regularized square loss function given X, y and theta
@@ -197,13 +225,13 @@ def compute_regularized_square_loss_gradient(X, y, theta, lambda_reg):
         grad - gradient vector, 1D numpy array of size (num_features)
     """
     #TODO
-    gradient = 1 / X.shape[0] * np.dot((np.dot(X, theta) - y), X)
+    gradient = compute_square_loss_gradient(X, y, theta) \
                  + 2 * lambda_reg * theta
     return gradient
 
 ###################################################
 ###Q2.5b: Batch Gradient Descent with regularization term
-def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
+def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000, check_gradient=True):
     """
     Args:
         X - the feature vector, 2D numpy array of size (num_instances, num_features)
@@ -223,8 +251,16 @@ def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     #TODO
     for i in range(num_iter+1):
         theta_hist[i] = theta
-        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
-                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        loss_hist[i] = compute_regularized_square_loss(X, y, theta, lambda_reg)
+        if check_gradient:
+            if not generic_gradient_checker(X, y, theta, 
+                                    compute_regularized_square_loss, 
+                                    compute_regularized_square_loss_gradient,
+                                    lambda_reg=lambda_reg):
+                print("The CHECKER says no!")
+                return None
+            if i == num_iter:
+                print("The CHECKER says yes!")
         theta = theta - alpha * compute_regularized_square_loss_gradient(X, y, theta, lambda_reg)
     return theta_hist, loss_hist
 
@@ -236,7 +272,7 @@ def regularized_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
 
 #############################################
 ###Q2.6a: Stochastic Gradient Descent
-def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
+def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000, check_gradient=True):
     """
     In this question you will implement stochastic gradient descent with a regularization term
     
@@ -259,13 +295,15 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
     theta = np.ones(num_features) #Initialize theta
     
     
-    theta_hist = np.zeros((num_iter, num_instances, num_features))  #Initialize theta_hist
-    loss_hist = np.zeros((num_iter, num_instances)) #Initialize loss_hist
+    # theta_hist = np.zeros((num_iter, num_instances, num_features))  #Initialize theta_hist
+    # loss_hist = np.zeros((num_iter, num_instances)) #Initialize loss_hist
+
+    theta_hist = np.zeros((num_iter+1, num_features))  #Initialize theta_hist
+    loss_hist = np.zeros(num_iter+1) #Initialize loss_hist
     #TODO
     for i in range(num_iter+1):
         theta_hist[i] = theta
-        loss_hist[i] = 1 / (2 * X.shape[0]) * (np.linalg.norm(np.dot(X, theta)-y, order=2) ** 2)
-                 + lambda_reg * (np.linalg.norm(theta) ** 2)
+        loss_hist[i] = compute_regularized_square_loss(X, y, theta, lambda_reg)
         if type(alpha) == float:
             alpha = alpha
         elif alpha == "1/sqrt(t)":
@@ -275,8 +313,16 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
         rand_i = np.random.randint(0, num_instances)
         x_i = X[rand_i]
         y_i = y[rand_i]
-        stoc_gradient = 1 / num_instances * np.dot(np.dot(x_i, theta) - y_i, x_i)
-                + 2 * lambda_reg * theta
+        if check_gradient:
+            if not generic_gradient_checker(x_i, y_i, theta, 
+                                    compute_regularized_square_loss, 
+                                    compute_regularized_square_loss_gradient,
+                                    lambda_reg=lambda_reg):
+                print("The CHECKER says no!")
+                return None
+            if i == num_iter:
+                print("The CHECKER says yes!")
+        stoc_gradient = compute_regularized_square_loss_gradient(x_i, y_i, theta, lambda_reg)
         theta = theta - alpha * stoc_gradient
     return theta_hist, loss_hist
 
@@ -286,7 +332,7 @@ def stochastic_grad_descent(X, y, alpha=0.1, lambda_reg=1, num_iter=1000):
 ##X-axis: Step number (for gradient descent) or Epoch (for SGD)
 ##Y-axis: log(objective_function_value)
 
-def main():
+def main(method):
     #Loading the dataset
     print('loading the dataset')
     
@@ -303,6 +349,26 @@ def main():
     X_test = np.hstack((X_test, np.ones((X_test.shape[0], 1)))) # Add bias term
 
     # TODO
+    print("training...")
+    if method == "batch_grad_descent":
+        theta_hist, loss_hist = batch_grad_descent(X_train, y_train)
+    elif method == "regularized_grad_descent":
+        theta_hist, loss_hist = regularized_grad_descent(X_train, y_train)
+    elif method == "stochastic_grad_descent":
+        theta_hist, loss_hist = stochastic_grad_descent(X_train, y_train)
+    print("The loss goes like ", loss_hist)
+    
+    # plot the loss history
+    # plt.plot(loss_hist[15:,], label=f"loss")
+    # plt.legend()
+    # plt.show()
+
+    print("testing...")
+    test_err = compute_square_loss(X_test, y_test, theta_hist[-1])
+    print("The test error is: ", test_err)
+
+
 
 if __name__ == "__main__":
-    main()
+    print(argv)
+    main(argv[1])
